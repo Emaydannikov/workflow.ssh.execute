@@ -1,0 +1,46 @@
+name: SSH Command Workflow
+
+on:
+  workflow_call:
+    inputs:
+      host:
+        required: true
+        type: string
+      username:
+        required: true
+        type: string
+      command:
+        required: false
+        type: string
+      password:
+        required: false
+        type: string
+      private_key:
+        required: false
+        type: string
+
+jobs:
+  ssh:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install sshpass
+      run: sudo apt-get install sshpass
+      
+    - name: Execute SSH Command with password
+      if: inputs.password && !inputs.private_key
+      run: |
+        sshpass -p ${{ inputs.password }} ssh -o "StrictHostKeyChecking=no" ${{ inputs.username }}@${{ inputs.host }} "${{ inputs.command }}"
+      
+    - name: Execute SSH Command with private key
+      if: inputs.private_key && !inputs.password
+      run: |
+        echo "${{ inputs.private_key }}" > private_key.pem
+        chmod 600 private_key.pem
+        ssh -i private_key.pem -o "StrictHostKeyChecking=no" ${{ inputs.username }}@${{ inputs.host }} "${{ inputs.command }}"
+        
+    - name: Execute SSH Command with private key and password
+      if: inputs.private_key && inputs.password
+      run: |
+        echo "${{ inputs.private_key }}" > private_key.pem
+        chmod 600 private_key.pem
+        sshpass -p ${{ inputs.password }} ssh -i private_key.pem -o "StrictHostKeyChecking=no" ${{ inputs.username }}@${{ inputs.host }} "${{ inputs.command }}"
